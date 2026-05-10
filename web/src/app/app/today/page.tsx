@@ -5,7 +5,8 @@ import { useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { ActivityTag } from "@/lib/supabase";
 import Link from "next/link";
-import { Check, ArrowRight, Plus, Search } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Check, ArrowRight, Plus, Search, Target } from "lucide-react";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
@@ -179,20 +180,24 @@ export default function TodayPage() {
 
         {/* Current Goal */}
         <motion.div variants={fadeUp} custom={2} className="mb-6">
-          <span
-            className="text-meta text-text-disabled block mb-2"
-            style={{ fontFamily: "var(--font-jetbrains)" }}
-          >
-            Current Goal
-          </span>
-          <h2 className="text-[22px] font-semibold text-text-primary leading-tight mb-1">
-            {activeGoal?.title || "No active goal yet"}
-          </h2>
-          <p className="text-[13px] text-text-secondary">
-            {activeGoal
-              ? "Goal-aligned this week"
-              : "Set a north star to begin"}
-          </p>
+          {activeGoal ? (
+            <>
+              <span
+                className="text-meta text-text-disabled block mb-2"
+                style={{ fontFamily: "var(--font-jetbrains)" }}
+              >
+                Current Goal
+              </span>
+              <h2 className="text-[22px] font-semibold text-text-primary leading-tight mb-1">
+                {activeGoal.title}
+              </h2>
+              <p className="text-[13px] text-text-secondary">
+                Goal-aligned this week
+              </p>
+            </>
+          ) : (
+            <EmptyGoalState />
+          )}
         </motion.div>
 
         {/* Needle Mover */}
@@ -358,6 +363,62 @@ export default function TodayPage() {
           </p>
         </motion.div>
       </motion.div>
+    </div>
+  );
+}
+
+function EmptyGoalState() {
+  const router = useRouter();
+  const exampleGoals = [
+    "Become Senior Backend Engineer",
+    "Ship My First SaaS",
+    "Improve Deep Work Consistency",
+    "Master System Design",
+  ];
+
+  return (
+    <div className="p-6 rounded-[20px] bg-elevated border border-border nf-shadow">
+      <div className="flex items-start gap-4 mb-4">
+        <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
+          <Target size={20} className="text-accent" />
+        </div>
+        <div>
+          <h2 className="text-[17px] font-semibold text-text-primary mb-1">
+            No active north star
+          </h2>
+          <p className="text-[13px] text-text-secondary leading-relaxed">
+            A north star helps you stay aware of what truly matters. What kind of engineer are you becoming?
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-2 mb-5">
+        <span
+          className="text-meta text-text-disabled block mb-2"
+          style={{ fontFamily: "var(--font-jetbrains)" }}
+        >
+          Examples
+        </span>
+        <div className="flex flex-wrap gap-2">
+          {exampleGoals.map((goal) => (
+            <button
+              key={goal}
+              onClick={() => router.push(`/app/goal/new?title=${encodeURIComponent(goal)}`)}
+              className="px-3 py-1.5 rounded-lg bg-surface border border-border text-[12px] text-text-secondary hover:text-text-primary hover:border-accent/20 transition-all"
+            >
+              {goal}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <button
+        onClick={() => router.push("/app/goal/new")}
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-accent text-white text-[14px] font-medium hover:brightness-110 transition-all"
+      >
+        <Plus size={16} />
+        Set Your Direction
+      </button>
     </div>
   );
 }
