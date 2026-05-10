@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { BreathingOrbs } from "@/components/breathing-orbs";
-import { DriftingParticles } from "@/components/drifting-particles";
 
 export default function LandingPage() {
   const [mounted, setMounted] = useState(false);
@@ -21,10 +20,9 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground relative">
-      {/* Animated Background Layers */}
+      {/* Animated Background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <BreathingOrbs />
-        <DriftingParticles />
       </div>
 
       {/* Nav */}
