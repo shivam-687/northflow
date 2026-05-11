@@ -120,8 +120,11 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   addActivity: async (content, tag) => {
     const { user, activeGoal } = get();
-    if (!user) return;
-    const { data } = await supabase
+    if (!user) {
+      console.error('[Store] addActivity: no user');
+      return;
+    }
+    const { data, error } = await supabase
       .from('activities')
       .insert({
         user_id: user.id,
@@ -131,6 +134,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       })
       .select()
       .single();
+    if (error) {
+      console.error('[Store] addActivity error:', error.message);
+      return;
+    }
     if (data) {
       set((state) => ({ activities: [data, ...state.activities] }));
     }
@@ -138,9 +145,12 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setNeedleMover: async (content) => {
     const { user } = get();
-    if (!user) return;
+    if (!user) {
+      console.error('[Store] setNeedleMover: no user');
+      return;
+    }
     const today = new Date().toISOString().split('T')[0];
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('needle_movers')
       .insert({
         user_id: user.id,
@@ -149,6 +159,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       })
       .select()
       .single();
+    if (error) {
+      console.error('[Store] setNeedleMover error:', error.message);
+      return;
+    }
     if (data) set({ todayNeedleMover: data });
   },
 
@@ -178,36 +192,50 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   createGoal: async (title, description, status, themes) => {
     const { user } = get();
-    if (!user) return;
+    if (!user) {
+      console.error('[Store] createGoal: no user');
+      return;
+    }
     
-    // If making active, deactivate any existing active goal
-    if (status === 'active') {
-      await supabase
+    try {
+      // If making active, deactivate any existing active goal
+      if (status === 'active') {
+        const { error: deactivateError } = await supabase
+          .from('goals')
+          .update({ status: 'paused' })
+          .eq('user_id', user.id)
+          .eq('status', 'active');
+        if (deactivateError) console.error('[Store] deactivate active goal error:', deactivateError.message);
+      }
+
+      const { data: goal, error: goalError } = await supabase
         .from('goals')
-        .update({ status: 'paused' })
-        .eq('user_id', user.id)
-        .eq('status', 'active');
+        .insert({
+          user_id: user.id,
+          title,
+          description,
+          status,
+          started_at: status === 'active' ? new Date().toISOString() : null,
+        })
+        .select()
+        .single();
+
+      if (goalError) {
+        console.error('[Store] createGoal insert error:', goalError.message);
+        return;
+      }
+
+      if (goal && themes.length > 0) {
+        const { error: themesError } = await supabase
+          .from('supporting_themes')
+          .insert(themes.map((name) => ({ goal_id: goal.id, name })));
+        if (themesError) console.error('[Store] insert themes error:', themesError.message);
+      }
+
+      await get().fetchGoals();
+    } catch (err) {
+      console.error('[Store] createGoal unexpected error:', err);
     }
-
-    const { data: goal } = await supabase
-      .from('goals')
-      .insert({
-        user_id: user.id,
-        title,
-        description,
-        status,
-        started_at: status === 'active' ? new Date().toISOString() : null,
-      })
-      .select()
-      .single();
-
-    if (goal && themes.length > 0) {
-      await supabase
-        .from('supporting_themes')
-        .insert(themes.map((name) => ({ goal_id: goal.id, name })));
-    }
-
-    await get().fetchGoals();
   },
 
   updateGoalStatus: async (goalId, status) => {
@@ -255,13 +283,20 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   updateProfile: async (updates) => {
     const { user } = get();
-    if (!user) return;
-    const { data } = await supabase
+    if (!user) {
+      console.error('[Store] updateProfile: no user');
+      return;
+    }
+    const { data, error } = await supabase
       .from('profiles')
       .update(updates)
       .eq('id', user.id)
       .select()
       .single();
+    if (error) {
+      console.error('[Store] updateProfile error:', error.message, error.details, error.hint);
+      return;
+    }
     if (data) {
       set({ profile: data });
     }
