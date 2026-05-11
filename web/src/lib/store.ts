@@ -21,6 +21,7 @@ interface AppState {
 
   // Actions
   setUser: (user: User | null) => void;
+  ensureProfile: () => Promise<boolean>;
   fetchProfile: () => Promise<void>;
   fetchGoals: () => Promise<void>;
   fetchActivities: (date?: string) => Promise<void>;
@@ -48,6 +49,43 @@ export const useAppStore = create<AppState>((set, get) => ({
   reflections: [],
 
   setUser: (user) => set({ user, loading: false }),
+
+  ensureProfile: async () => {
+    const { user } = get();
+    if (!user) return false;
+
+    // Check if profile exists
+    const { data: existing } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    if (existing) {
+      set({ profile: existing });
+      return true;
+    }
+
+    // Auto-create profile if missing
+    const { data: created, error } = await supabase
+      .from('profiles')
+      .insert({
+        id: user.id,
+        name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || null,
+        email: user.email || '',
+        avatar_url: user.user_metadata?.avatar_url || null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[Store] ensureProfile error:', error.message);
+      return false;
+    }
+
+    if (created) set({ profile: created });
+    return true;
+  },
 
   fetchProfile: async () => {
     const { user } = get();
@@ -119,11 +157,18 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   addActivity: async (content, tag) => {
-    const { user, activeGoal } = get();
+    const { user, activeGoal, ensureProfile } = get();
     if (!user) {
       console.error('[Store] addActivity: no user');
       return;
     }
+
+    const hasProfile = await ensureProfile();
+    if (!hasProfile) {
+      console.error('[Store] addActivity: failed to ensure profile');
+      return;
+    }
+
     const { data, error } = await supabase
       .from('activities')
       .insert({
@@ -144,11 +189,18 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   setNeedleMover: async (content) => {
-    const { user } = get();
+    const { user, ensureProfile } = get();
     if (!user) {
       console.error('[Store] setNeedleMover: no user');
       return;
     }
+
+    const hasProfile = await ensureProfile();
+    if (!hasProfile) {
+      console.error('[Store] setNeedleMover: failed to ensure profile');
+      return;
+    }
+
     const today = new Date().toISOString().split('T')[0];
     const { data, error } = await supabase
       .from('needle_movers')
@@ -191,9 +243,16 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   createGoal: async (title, description, status, themes) => {
-    const { user } = get();
+    const { user, ensureProfile } = get();
     if (!user) {
       console.error('[Store] createGoal: no user');
+      return;
+    }
+
+    // Ensure profile exists before creating goal
+    const hasProfile = await ensureProfile();
+    if (!hasProfile) {
+      console.error('[Store] createGoal: failed to ensure profile');
       return;
     }
     
@@ -264,9 +323,19 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   addReflection: async (mood, energy, note) => {
-    const { user } = get();
-    if (!user) return;
-    const { data } = await supabase
+    const { user, ensureProfile } = get();
+    if (!user) {
+      console.error('[Store] addReflection: no user');
+      return;
+    }
+
+    const hasProfile = await ensureProfile();
+    if (!hasProfile) {
+      console.error('[Store] addReflection: failed to ensure profile');
+      return;
+    }
+
+    const { data, error } = await supabase
       .from('reflections')
       .insert({
         user_id: user.id,
@@ -276,6 +345,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       })
       .select()
       .single();
+    if (error) {
+      console.error('[Store] addReflection error:', error.message);
+      return;
+    }
     if (data) {
       set((state) => ({ reflections: [data, ...state.reflections] }));
     }
