@@ -88,14 +88,27 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   fetchProfile: async () => {
-    const { user } = get();
+    const { user, ensureProfile } = get();
     if (!user) return;
-    const { data } = await supabase
+
+    const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', user.id)
-      .single();
-    if (data) set({ profile: data });
+      .maybeSingle();
+
+    if (error) {
+      console.error('[Store] fetchProfile error:', error.message);
+      return;
+    }
+
+    if (data) {
+      set({ profile: data });
+    } else {
+      // Profile missing — auto-create it
+      console.log('[Store] fetchProfile: no profile found, creating...');
+      await ensureProfile();
+    }
   },
 
   fetchGoals: async () => {
@@ -133,14 +146,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { user } = get();
     if (!user) return;
     const today = new Date().toISOString().split('T')[0];
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('needle_movers')
       .select('*')
       .eq('user_id', user.id)
       .eq('date', today)
       .order('created_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
+    if (error && error.code !== 'PGRST116') {
+      console.error('[Store] fetchTodayNeedleMover error:', error.message);
+    }
     set({ todayNeedleMover: data || null });
   },
 
