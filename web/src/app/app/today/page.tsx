@@ -6,7 +6,7 @@ import { useAppStore } from "@/lib/store";
 import { ActivityTag } from "@/lib/supabase";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ArrowRight, Plus, Search, Target } from "lucide-react";
+import { Check, ArrowRight, Plus, Target } from "lucide-react";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
@@ -164,9 +164,15 @@ export default function TodayPage() {
               NorthFlow
             </span>
           </div>
-          <button className="p-2 rounded-xl hover:bg-surface transition-colors">
-            <Search size={18} className="text-text-disabled" />
-          </button>
+          <Link
+            href="/app/reflect"
+            className="p-2 rounded-xl hover:bg-surface transition-colors"
+            title="Reflect"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-text-disabled">
+              <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+            </svg>
+          </Link>
         </motion.div>
 
         {/* Greeting */}
