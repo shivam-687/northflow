@@ -152,12 +152,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       .eq('user_id', user.id)
       .eq('date', today)
       .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (error && error.code !== 'PGRST116') {
+      .limit(1);
+    if (error) {
       console.error('[Store] fetchTodayNeedleMover error:', error.message);
     }
-    set({ todayNeedleMover: data || null });
+    set({ todayNeedleMover: data?.[0] || null });
   },
 
   fetchReflections: async () => {
